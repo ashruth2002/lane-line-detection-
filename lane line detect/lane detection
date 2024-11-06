@@ -1,0 +1,63 @@
+import cv2
+import numpy as np
+
+# Function to apply region of interest
+def region_of_interest(img, vertices):
+    mask = np.zeros_like(img)
+    cv2.fillPoly(mask, vertices, 255)
+    masked_img = cv2.bitwise_and(img, mask)
+    return masked_img
+
+# Function to draw lines on the image
+def draw_lines(img, lines, color=(0, 255, 0), thickness=2):
+    if lines is not None:
+        for line in lines:
+            for x1, y1, x2, y2 in line:
+                cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+
+# Function to process the image
+def process_image(image):
+    # Convert to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # Apply Gaussian blur
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    # Canny edge detection
+    edges = cv2.Canny(blur, 50, 150)
+    
+    # Define the region of interest
+    height, width = edges.shape
+    roi_vertices = [(0, height), (width / 2, height / 2), (width, height)]
+    roi = region_of_interest(edges, np.array([roi_vertices], np.int32))
+    
+    # Hough Transform to detect lines
+    lines = cv2.HoughLinesP(roi, 1, np.pi / 180, threshold=50, minLineLength=100, maxLineGap=50)
+    
+    # Draw lines on the original image
+    draw_lines(image, lines)
+    
+    return image
+
+# Main function to run the lane detection
+def main():
+    # Capture video from file or camera
+    cap = cv2.VideoCapture('path_to_video.mp4')  # Replace with your video path
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        # Process each frame
+        processed_frame = process_image(frame)
+        
+        # Display the result
+        cv2.imshow('Lane Detection', processed_frame)
+        
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
